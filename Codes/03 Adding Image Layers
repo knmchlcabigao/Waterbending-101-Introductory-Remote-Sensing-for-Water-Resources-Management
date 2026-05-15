@@ -1,0 +1,14 @@
+// Add Image Layers
+// We use the function .first to get the first image from an Image Collection
+
+// Importing Landsat Images
+var landsat = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
+.first();
+
+print(landsat)
+
+// Importing Sentinel-2 Images
+var sentinel_2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+.first();
+
+print(sentinel_2)
