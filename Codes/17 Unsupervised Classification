@@ -1,0 +1,47 @@
+// Unsupervised classification
+
+// Get Satellite Data
+
+var sent2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED");
+
+//Add/Write Functions
+
+function maskS2clouds(image) {
+  var qa = image.select('QA60');
+
+  // Bits 10 and 11 are clouds and cirrus, respectively.
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+
+  // Both flags should be set to zero, indicating clear conditions.
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0)
+      .and(qa.bitwiseAnd(cirrusBitMask).eq(0));
+
+  return image.updateMask(mask).divide(10000);
+}
+
+//Add filters and apply functions
+var filtered_data = sent2.filterBounds(geom)
+.filterDate('2019-01-01','2020-01-01')
+.filterMetadata('CLOUDY_PIXEL_PERCENTAGE', 'less_than', 30)
+.map(maskS2clouds)
+.median()
+.clip(geom)
+.select(['B2','B3', 'B4', 'B5','B6','B7','B8','B8A','B11','B12']);
+
+// create a training dataset for clustering
+var training = filtered_data.sample({
+  region: geom,
+  scale: 10, 
+  numPixels: 5000
+});
+
+// cluster
+
+var clusterAlgo = ee.Clusterer.wekaKMeans(15).train(training);
+
+// Result of the cluster
+var result = filtered_data.cluster(clusterAlgo);
+
+// Display result
+Map.addLayer(result.randomVisualizer(), {}, 'Unsupervised Classification');
