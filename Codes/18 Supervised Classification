@@ -1,0 +1,96 @@
+// Supervised classification
+
+// Get Satellite Data
+
+var sent2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED");
+
+//Add/Write Functions
+
+function maskS2clouds(image) {
+  var qa = image.select('QA60');
+
+  // Bits 10 and 11 are clouds and cirrus, respectively.
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+
+  // Both flags should be set to zero, indicating clear conditions.
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0)
+      .and(qa.bitwiseAnd(cirrusBitMask).eq(0));
+
+  return image.updateMask(mask).divide(10000);
+}
+
+//Add filters and apply functions
+var filtered_data = sent2.filterBounds(geom)
+.filterDate('2019-01-01','2020-01-01')
+.filterMetadata('CLOUDY_PIXEL_PERCENTAGE', 'less_than', 30)
+.map(maskS2clouds)
+.median()
+.clip(geom)
+.select(['B2', 'B3', 'B4','B5','B6','B7','B8','B8A','B11', 'B12']);
+
+// Map.addLayer(filtered_data, {
+//   min: 0,
+//   max: 0.4,
+//   bands: ['B4','B3','B2']
+// });
+
+
+// Combine training data
+var trainingPts = urban.merge(water).merge(vegetation);
+
+// divide training points into training and validation
+var trainingPts = trainingPts.randomColumn();
+var trainingGcp = trainingPts.filter(ee.Filter.lt('random', 0.7));
+var validationGcp = trainingPts.filter(ee.Filter.gte('random', 0.7));
+
+// Overlay the points on the image to get training data
+var training = filtered_data.sampleRegions({
+  collection: trainingGcp, 
+  properties: ['landcover'],
+  scale: 10
+});
+
+// Get bands for analysis and classification
+var classifier = ee.Classifier.smileRandomForest(50).train({
+  features: training, 
+  classProperty: 'landcover',
+  inputProperties: filtered_data.bandNames()
+});
+
+//Classify the image using the trained model
+var classified = filtered_data.classify(classifier);
+
+// Visualize results
+var palette = ['red','blue','green'];
+
+Map.addLayer(classified, {min: 1, max: 3, palette: palette}, 'Classified Image');
+
+// Accuracy assessment
+var test = classified.sampleRegions({
+  collection: validationGcp,
+  properties: ['landcover'],
+  scale: 10
+});
+
+var testConfusionMatrix = test.errorMatrix('landcover', 'classification');
+print('Confusion Matrix', testConfusionMatrix);
+print('Test accuracy', testConfusionMatrix.accuracy());
+
+
+// export confusion matrix
+
+var errorMatrixResults = ee.FeatureCollection([
+  ee.Feature(null, {
+    'accuracy': testConfusionMatrix.accuracy(),
+    'consumer accuracy': testConfusionMatrix.consumersAccuracy(),
+    'producer accuracy': testConfusionMatrix.producersAccuracy(),
+    'Kappa': testConfusionMatrix.kappa()
+  })
+]);
+  
+Export.table.toDrive({
+  collection: errorMatrixResults,
+  description: 'Confusion_matrix',
+  fileFormat: 'CSV'
+});
