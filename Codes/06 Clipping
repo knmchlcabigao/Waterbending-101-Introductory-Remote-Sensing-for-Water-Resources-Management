@@ -1,0 +1,11 @@
+// Importing Landsat Images
+var landsat = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2");
+
+// Apply filters and reducers
+var filtered_data = landsat.filterBounds(roi)
+.filterDate('2018-01-01', '2019-01-01')
+.filterMetadata('CLOUD_COVER', 'less_than', 30)
+.median();
+
+// Clipping the image collection to your ROI
+var clipped_data = filtered_data.clip(roi);
