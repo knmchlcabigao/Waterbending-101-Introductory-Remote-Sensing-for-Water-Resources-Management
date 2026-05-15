@@ -1,0 +1,39 @@
+// Calculating total rainfall over a region
+
+// Import data
+
+var chirps = ee.ImageCollection("UCSB-CHC/CHIRPS/V3/PENTAD");
+
+// Filter data collection
+var startDate = '2017-01-01';
+var endDate = '2018-01-01';
+
+var filteredCol = chirps.filterDate(startDate, endDate);
+
+// Calculate 2017 rainfall using reducers
+
+var total = filteredCol.reduce(ee.Reducer.sum()).clip(geom);
+
+// Visualization parameters
+
+var rainColor = ['blue','yellow','red','violet', 'black'];
+
+var visParams = {
+  min: 0,
+  max: 4000,
+  palette: rainColor
+};
+
+Map.addLayer(total, visParams, 'Total Precipitation');
+
+// Calculate average rainfall
+
+var stats = total.reduceRegion({
+  reducer: ee.Reducer.mean(),
+  geometry: geom,
+  scale: 5566
+});
+
+print(stats);
+
+print('Average rainfall across NCR (2017) :' , stats.getNumber('precipitation_sum'));
