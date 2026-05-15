@@ -1,0 +1,29 @@
+// Importing Landsat Images
+var landsat = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2");
+
+// Apply filters and reducers
+var filtered_data = landsat.filterBounds(roi)
+.filterDate('2018-01-01', '2019-01-01')
+.filterMetadata('CLOUD_COVER', 'less_than', 30)
+.median()
+.clip(roi);
+
+// Creating visualization parameters (for RGB composites or True Color Composites)
+// True Color Composites (an image displaying a combination of visible red, green and blue 
+// bands to the corresponding red, green and blue channels on the computer)
+
+//The resulting composite resembles what would be observed naturally by the human eye, 
+// vegetation appears green, water dark is blue to black and bare ground and impervious surfaces appear light grey and brown.
+
+var rgb_Viz = {
+  bands: ['SR_B4','SR_B3', 'SR_B2'],
+  min: 7000, 
+  max: 14000
+};
+
+// Visualize True Color Composite
+// We use Map.addLayer to add this to the main map canvas, 
+// we can also use Map.centerObject to center the map canvas to our study site
+
+Map.addLayer(filtered_data, rgb_Viz, 'True Color Composite');
+Map.centerObject(roi, 10)
