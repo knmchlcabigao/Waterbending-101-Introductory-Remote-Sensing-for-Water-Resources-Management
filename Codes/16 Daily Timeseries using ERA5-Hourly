@@ -1,0 +1,101 @@
+// Daily timeseries (using ERA-5 Land Hourly)
+
+// Load data
+var era5 = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY")
+.select('total_precipitation_hourly');
+
+// Date coverage
+var startDate = ee.Date('2017-01-01');
+var endDate = ee.Date('2021-01-01');
+
+var nDays = endDate.difference(startDate, 'day');
+var days = ee.List.sequence(0, nDays.subtract(1));
+
+// Aggregate daily (since ERA5 is in hourly);
+
+var createDailyCol = function(day){
+  day = ee.Number(day);
+  
+  var start = startDate.advance(day, 'day');
+  var end = start.advance(1, 'day');
+  
+  var dailyCol = era5
+  .filterDate(start, end)
+  .sum();
+  
+  var daily_mm = dailyCol.multiply(1000).rename('precip_mm');
+  
+  return daily_mm.set({
+    'system:time_start': start.millis(),
+    'date': start.format('YYYY-MM-dd'),
+    'year': start.get('year'),
+    'month': start.get('month'),
+    'day': start.get('day')
+  });
+};
+
+// Daily Collection
+
+var dailyCollection = ee.ImageCollection.fromImages(days.map(createDailyCol));
+
+print('ERA5-Land Daily Collection', dailyCollection);
+
+// Timeseries Chart
+
+var chart = ui.Chart.image.series({
+  imageCollection: dailyCollection, 
+  region: geom,
+  reducer: ee.Reducer.mean(),
+  scale: 11132
+  }).setOptions({
+    title: 'Daily Precipitation',
+    vAxis: {title: "Rainfall (mm/day)"},
+    hAxis: {title: 'Date'},
+    linewidth: 1,
+    pointSize: 0
+  });
+  
+print(chart);
+
+var filt = dailyCollection.mean().clip(geom);
+var vis = ['red','blue','black'];
+var viz = {
+  min: 0,
+  max: 200,
+  palette: vis
+};
+
+Map.addLayer(filt, viz);
+
+// // Per pixel time series
+
+var tsOutput = dailyCollection.map(function(image){
+  var date = image.date().format('YYYY-MM-dd');
+  
+  return image.sample({
+    region: geom,
+    scale: 11132,
+    numPixels: 1e14, 
+    geometries: true
+  }).map(function(f){
+    
+    var coords = f.geometry().coordinates();
+    
+    return f.set({
+      'lon': coords.get(0),
+      'lat': coords.get(1),
+      'date': date,
+      'station': f.id()
+    });
+  });
+}).flatten();
+
+// Export per pixel timeseries
+// remove comment to run
+
+// Export.table.toDrive({
+//   collection: tsOutput,
+//   description: 'ERA5-Land_DailyRainfall',
+//   fileFormat: 'CSV'
+// });
+
