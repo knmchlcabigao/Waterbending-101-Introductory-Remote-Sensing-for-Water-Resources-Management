@@ -1,0 +1,59 @@
+// Importing Landsat Images
+var landsat = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2");
+
+// Applies scaling factors.
+function applyScaleFactors(image) {
+  var opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2);
+  var thermalBands = image.select('ST_B.*').multiply(0.00341802).add(149.0);
+  return image.addBands(opticalBands, null, true)
+              .addBands(thermalBands, null, true);
+}
+
+
+// Apply filters and reducers
+var filtered_data = landsat.filterBounds(roi)
+.filterDate('2018-01-01', '2019-12-31')
+.filterMetadata('CLOUD_COVER', 'less_than', 60)
+.map(applyScaleFactors)
+.median()
+.clip(roi);
+
+// Visualization Parameters
+var rgb_Viz = {
+  min: 0, 
+  max: 0.3,
+  bands: ['SR_B4', 'SR_B3', 'SR_B2']
+};
+
+// Visualize
+
+Map.addLayer(filtered_data, rgb_Viz, 'True Color Composite');
+Map.centerObject(roi,10);
+
+// Computing Spectral Indices on an Image (Example: MNDWI)
+//(G - S1) / (G + S1)
+
+  // Using the .normalizedDifference function
+  var mndwi = filtered_data.normalizedDifference(['SR_B3','SR_B6']);
+  
+  // using the .expression function (if you want to compute them manually and 
+  // if they do not have the usual normalized difference equations)
+  // .select() function select a band from your image
+  var mndwi_expression = filtered_data.expression(
+    '(GREEN - SWIR1) / (GREEN + SWIR1)', {
+      'GREEN': filtered_data.select('SR_B3'),
+      'SWIR1': filtered_data.select('SR_B6')
+    }
+  ).rename('MNDWI');
+
+
+// Visualize MNDWI (normalized difference output ranges from -1 to +1)
+
+var mndwi_viz = {
+  min: -1,
+  max: 1,
+  palette: ['red','white','blue']
+};
+
+Map.addLayer(mndwi, mndwi_viz, "2018 MNDWI");
+Map.addLayer(mndwi_expression.select('MNDWI'), mndwi_viz, '2018 MNDWI thru Expression');
