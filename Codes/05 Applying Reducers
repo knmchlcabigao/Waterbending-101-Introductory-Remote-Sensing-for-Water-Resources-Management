@@ -1,0 +1,24 @@
+// Importing Landsat Images
+var landsat = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2");
+
+// Apply filters 
+var filtered_data = landsat.filterBounds(roi)
+.filterDate('2018-01-01', '2019-01-01')
+.filterMetadata('CLOUD_COVER', 'less_than', 30);
+
+print(filtered_data, "Filtered Image Collection");
+
+// Applying reducers
+var mean_data= filtered_data.mean();
+print(mean_data, 'Mean Composite');
+
+var median_data = filtered_data.median();
+print(median_data, 'Median Composite');
+
+var mode_data = filtered_data.mode();
+print(mode_data, "Modal Composite");
+
+// Usual reducer used for satellite imagery collection is MEDIAN
+// This is to get a "cloud free" image composite from your image collection
+
+
