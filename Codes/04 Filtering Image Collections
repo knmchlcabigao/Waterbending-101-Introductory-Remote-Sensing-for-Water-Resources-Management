@@ -1,0 +1,48 @@
+// Load and Filter an Image Collection
+// Import geometry using drawing tools
+
+// Importing Landsat Images
+var landsat = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2");
+
+// Filter by Date filter
+  // Using ee.ImageCollection.filterDate
+  var filtered_date = landsat.filterDate('2018-01-01', '2019-01-01');
+  print(filtered_date, 'Filter date using filterDate');
+  
+  //Using ee.Filter.date
+  var filtered_date_2 = landsat.filter(ee.Filter.date('2018-01-01', '2019-01-01'));
+  print(filtered_date_2, 'Filter date using ee.Filter');
+  
+  //for specific months only, example: January - May ONLY)
+  var filtered_date_3 = landsat.filter(ee.Filter.calendarRange(1, 5, 'Month'));
+  print(filtered_date_3, 'Filter date using ee.Filter.calendarRange');
+
+// Filter by ROI 
+  // Using ee.ImageCollection.filterBounds
+  var filtered_roi = landsat.filterBounds(roi);
+  print(filtered_roi, 'Filter roi using filterBounds');
+  
+  // Using ee.Filter.bounds
+  var filtered_roi_2 = landsat.filter(ee.Filter.bounds(roi));
+  print(filtered_roi_2, 'Filter roi using eee.Filter');
+  
+//filter by Metadata (cloud cover)
+  //Using ee.ImageCollection.filterMetadata
+  var filtered_mt = landsat.filterMetadata('CLOUD_COVER','less_than', 10);
+  print(filtered_mt, 'Filter roi using ee.filterMetadata');
+  
+  //Using ee.Filter (greater than = gt, less than = lt, equal = eq)
+  var filtered_mt_2 = landsat.filter(ee.Filter.lt('CLOUD_COVER', 10));
+  print(filtered_mt_2, 'Filter roi using ee.Filter');
+
+
+// But you can apply all filters in a single code structure
+// This is a filtered data collected from Landsat 
+// for the year 2020 over NCR, with cloud cover less than 30%
+var filtered_data = landsat.filterBounds(roi)
+.filterDate('2018-01-01', '2019-01-01')
+.filterMetadata('CLOUD_COVER', 'less_than', 30);
+
+print(filtered_data, 'Actual Filtered Data for the study site (2020)');
+  // The console panel shows that 8 images satisfy all the conditions defined in the filter function
+
