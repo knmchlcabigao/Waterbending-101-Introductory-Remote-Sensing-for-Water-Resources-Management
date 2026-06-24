@@ -9,3 +9,13 @@ version: 1.0.0
 doi: 10.5281/zenodo.20823999
 date-released: 2026-06-24
 url: "https://github.com/knmchlcabigao/Waterbending-101-Introductory-Remote-Sensing-for-Water-Resources-Management"
+
+preferred-citation:
+  type: manual
+  authors:
+    - family-names: Cabigao
+      given-names: Kean Michael
+  title: "Waterbending 101: Introductory Remote Sensing for Water Resources Management"
+  year: 2026
+  month: 6
+  doi: "10.5281/zenodo.20823999"
